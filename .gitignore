@@ -40,8 +40,8 @@ yarn-error.log*
 *.tsbuildinfo
 next-env.d.ts
 
-# dulcompare runtime data — runs are per-machine; presets are tracked so they travel with the repo
+# dulcompare runtime data — runs are per-machine; presets travel with the repo
 /data/*
 !/data/presets/
 /data/presets/*
-!/data/presets/.gitkeep
+!/data/presets/*.json

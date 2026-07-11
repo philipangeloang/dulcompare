@@ -1,0 +1,187 @@
+{
+  "id": "dulcolax-datalayer",
+  "name": "Dulcolax dataLayer",
+  "suite": "datalayer",
+  "pages": [
+    {
+      "label": "Home",
+      "path": "",
+      "interactions": [
+        {
+          "type": "click",
+          "selector": ".hero--content--wrapper a[data-gtm-click=\"true\"]"
+        },
+        {
+          "type": "click",
+          "selector": "nav a.mega-nav__itemLink"
+        },
+        {
+          "type": "click",
+          "selector": "footer .footer__quickLink"
+        },
+        {
+          "type": "click",
+          "selector": "footer a[target=\"_blank\"]"
+        }
+      ]
+    },
+    {
+      "label": "Error Page",
+      "path": "this-page-does-not-exist",
+      "skipEvents": [
+        "generic"
+      ]
+    },
+    {
+      "label": "Product List",
+      "path": "products",
+      "skipEvents": [
+        "generic"
+      ],
+      "interactions": [
+        {
+          "type": "click",
+          "selector": "[data-gtm-type=\"product_card\"]"
+        },
+        {
+          "type": "select",
+          "selector": "select"
+        },
+        {
+          "type": "click",
+          "selector": ".breadcrumbs--link"
+        }
+      ]
+    },
+    {
+      "label": "Product Detail",
+      "path": "products/chewy-fruit-bites",
+      "skipEvents": [
+        "generic"
+      ],
+      "interactions": [
+        {
+          "type": "click",
+          "selector": ".productDetailSlider__navButton.right.carousel__navButton"
+        },
+        {
+          "type": "click",
+          "selector": ".bv_main_rating_button"
+        },
+        {
+          "type": "click",
+          "selector": ".bv_button_component_container button"
+        },
+        {
+          "type": "click",
+          "selector": ".accordion__trigger[data-faq=\"true\"]"
+        },
+        {
+          "type": "click",
+          "selector": ".product-info-gtm"
+        },
+        {
+          "type": "click",
+          "selector": ".ps-online-buy-button"
+        },
+        {
+          "type": "click",
+          "selector": ".link.product-info-gtm"
+        },
+        {
+          "type": "wait",
+          "ms": 600
+        },
+        {
+          "type": "click",
+          "selector": "button[title=\"close modal\"]"
+        }
+      ]
+    },
+    {
+      "label": "Article List",
+      "path": "about-constipation",
+      "skipEvents": [
+        "generic"
+      ],
+      "interactions": [
+        {
+          "type": "click",
+          "selector": "[data-gtm-type=\"article_card_item\"]"
+        }
+      ]
+    },
+    {
+      "label": "Article Detail",
+      "path": "about-constipation/what-is-constipation",
+      "skipEvents": [
+        "generic"
+      ]
+    },
+    {
+      "label": "Page with Video",
+      "path": "",
+      "skipEvents": [
+        "generic"
+      ],
+      "interactions": [
+        {
+          "type": "video"
+        }
+      ]
+    },
+    {
+      "label": "Contact / Lead Form",
+      "path": "sign-up-and-save",
+      "skipEvents": [
+        "generic"
+      ],
+      "interactions": [
+        {
+          "type": "fill",
+          "selector": "input[type=\"text\"]",
+          "value": "test"
+        },
+        {
+          "type": "fill",
+          "selector": "input[type=\"email\"]",
+          "value": "notAEmail"
+        },
+        {
+          "type": "click",
+          "selector": "button[type=\"submit\"]"
+        },
+        {
+          "type": "fill",
+          "selector": "input[type=\"email\"]",
+          "value": "test@test.com"
+        },
+        {
+          "type": "click",
+          "selector": "button[type=\"submit\"]"
+        }
+      ]
+    },
+    {
+      "label": "Buy",
+      "path": "where-to-buy",
+      "skipEvents": [
+        "generic"
+      ],
+      "interactions": [
+        {
+          "type": "click",
+          "selector": ".ps-map-location-button"
+        },
+        {
+          "type": "click",
+          "selector": ".ps-online-buy-button"
+        },
+        {
+          "type": "click",
+          "selector": ".ps-local-seller-select"
+        }
+      ]
+    }
+  ]
+}

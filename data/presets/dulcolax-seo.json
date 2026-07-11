@@ -1,0 +1,203 @@
+{
+  "id": "dulcolax-seo",
+  "name": "Dulcolax SEO",
+  "suite": "seo",
+  "pages": [
+    {
+      "label": "Home",
+      "path": ""
+    },
+    {
+      "label": "Product List",
+      "path": "products"
+    },
+    {
+      "label": "Product Finder",
+      "path": "products/product-finder"
+    },
+    {
+      "label": "Product Detail",
+      "path": "products/gummies"
+    },
+    {
+      "label": "Product Detail",
+      "path": "products/powder-laxative"
+    },
+    {
+      "label": "Product Detail",
+      "path": "products/liquid-gel"
+    },
+    {
+      "label": "Product Detail",
+      "path": "products/laxative-tablets"
+    },
+    {
+      "label": "Product Detail",
+      "path": "products/soft-chews"
+    },
+    {
+      "label": "Product Detail",
+      "path": "products/chewy-fruit-bites"
+    },
+    {
+      "label": "Product Detail",
+      "path": "products/liquid-laxative"
+    },
+    {
+      "label": "Product Detail",
+      "path": "products/stool-softener"
+    },
+    {
+      "label": "Product Detail",
+      "path": "products/laxative-suppositories"
+    },
+    {
+      "label": "Product Detail",
+      "path": "products/pink-laxative-tablets"
+    },
+    {
+      "label": "Product Detail",
+      "path": "products/kids-soft-chews"
+    },
+    {
+      "label": "Article List",
+      "path": "about-constipation"
+    },
+    {
+      "label": "Article Detail",
+      "path": "about-constipation/what-is-constipation"
+    },
+    {
+      "label": "Article Detail",
+      "path": "about-constipation/digestive-system"
+    },
+    {
+      "label": "Article Detail",
+      "path": "about-constipation/bowel-movement"
+    },
+    {
+      "label": "Article Detail",
+      "path": "about-constipation/constipation-and-diarrhea"
+    },
+    {
+      "label": "Article Detail",
+      "path": "about-constipation/constipation-and-bloating"
+    },
+    {
+      "label": "Article Detail",
+      "path": "about-constipation/laxative-types"
+    },
+    {
+      "label": "Article Detail",
+      "path": "about-constipation/home-remedies-for-constipation"
+    },
+    {
+      "label": "Article Detail",
+      "path": "about-constipation/constipation-in-old-age"
+    },
+    {
+      "label": "Article Detail",
+      "path": "about-constipation/pregnancy-constipation"
+    },
+    {
+      "label": "Article Detail",
+      "path": "about-constipation/travel-constipation-relief-your-guide-to-digestive-health-on-the-go"
+    },
+    {
+      "label": "Article Detail",
+      "path": "about-constipation/constipation-in-children"
+    },
+    {
+      "label": "Article Detail",
+      "path": "about-constipation/constipation-signs-symptoms"
+    },
+    {
+      "label": "Article Detail",
+      "path": "about-constipation/stress-and-constipation"
+    },
+    {
+      "label": "Article Detail",
+      "path": "about-constipation/constipation-before-period"
+    },
+    {
+      "label": "Article Detail",
+      "path": "about-constipation/a-guide-to-use-fibers"
+    },
+    {
+      "label": "Article Detail",
+      "path": "about-constipation/foods-to-avoid-when-constipated"
+    },
+    {
+      "label": "Article Detail",
+      "path": "about-constipation/how-your-mental-health-might-affect-constipation"
+    },
+    {
+      "label": "Article Detail",
+      "path": "about-constipation/how-physical-health-influences-occasional-constipation-and-digestive-wellness"
+    },
+    {
+      "label": "Article Detail",
+      "path": "about-constipation/pregnancy-during-constipation"
+    },
+    {
+      "label": "Article Detail",
+      "path": "about-constipation/fiber-and-menopause"
+    },
+    {
+      "label": "Article Detail",
+      "path": "about-constipation/pms-and-digestive-issues"
+    },
+    {
+      "label": "Article Detail",
+      "path": "about-constipation/digestive-system-process"
+    },
+    {
+      "label": "Article Detail",
+      "path": "about-constipation/suppository-and-constipation"
+    },
+    {
+      "label": "Article Detail",
+      "path": "about-constipation/can-stress-cause-constipation"
+    },
+    {
+      "label": "Article Detail",
+      "path": "about-constipation/breaking-the-taboo"
+    },
+    {
+      "label": "Values",
+      "path": "values/our-mission"
+    },
+    {
+      "label": "Values",
+      "path": "values/sustainability"
+    },
+    {
+      "label": "Buy",
+      "path": "where-to-buy"
+    },
+    {
+      "label": "Coupons",
+      "path": "coupons"
+    },
+    {
+      "label": "Coupons",
+      "path": "coupons/printable-coupons"
+    },
+    {
+      "label": "Coupons",
+      "path": "coupons/mobile-coupons"
+    },
+    {
+      "label": "Community Guidelines",
+      "path": "community-guidelines"
+    },
+    {
+      "label": "Contact",
+      "path": "sign-up-and-save"
+    },
+    {
+      "label": "Recycling",
+      "path": "recycling"
+    }
+  ]
+}
