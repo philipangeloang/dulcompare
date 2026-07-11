@@ -34,6 +34,7 @@ export async function listPresets(): Promise<Preset[]> {
 }
 export const getPreset = (id: string) => readJson<Preset>(path.join(PRESETS, `${id}.json`));
 export const upsertPreset = (p: Preset) => writeJson(path.join(PRESETS, `${p.id}.json`), p);
+export const deletePreset = (id: string) => fs.rm(path.join(PRESETS, `${id}.json`), { force: true });
 
 const runDir = (id: string) => path.join(RUNS, id);
 export const saveRunMeta = (m: RunMeta) => writeJson(path.join(runDir(m.id), 'meta.json'), m);

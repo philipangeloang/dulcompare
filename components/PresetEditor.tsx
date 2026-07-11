@@ -222,6 +222,10 @@ export default function PresetEditor() {
   const [saving, setSaving] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
   const [saved, setSaved] = useState(false);
+  const [deleting, setDeleting] = useState(false);
+  const [bulkOpen, setBulkOpen] = useState(false);
+  const [bulkText, setBulkText] = useState("");
+  const [bulkError, setBulkError] = useState<string | null>(null);
 
   async function loadPresets(): Promise<Preset[]> {
     const res = await fetch("/api/presets", { cache: "no-store" });
@@ -284,6 +288,45 @@ export default function PresetEditor() {
   function addPage() {
     updateDraft((prev) => ({ ...prev, pages: [...prev.pages, blankPage()] }));
   }
+  function loadBulkPages(mode: "replace" | "append") {
+    let parsed: unknown;
+    try {
+      parsed = JSON.parse(bulkText);
+    } catch {
+      setBulkError("Not valid JSON. Check for missing quotes or trailing commas.");
+      return;
+    }
+    if (!Array.isArray(parsed)) {
+      setBulkError('Expected a JSON array, e.g. [{ "label": "Home", "path": "" }].');
+      return;
+    }
+    const newPages: DraftPage[] = [];
+    try {
+      parsed.forEach((item, i) => {
+        if (!item || typeof item !== "object") throw new Error(`Item ${i + 1} must be an object.`);
+        const rec = item as Record<string, unknown>;
+        if (typeof rec.label !== "string" || typeof rec.path !== "string") {
+          throw new Error(`Item ${i + 1} needs a string "label" and "path".`);
+        }
+        const entry: PageEntry = { label: rec.label, path: rec.path };
+        if (Array.isArray(rec.interactions)) entry.interactions = rec.interactions as Interaction[];
+        if (Array.isArray(rec.skipEvents)) {
+          entry.skipEvents = (rec.skipEvents as unknown[]).filter((s): s is string => typeof s === "string");
+        }
+        newPages.push(toDraftPage(entry));
+      });
+    } catch (err) {
+      setBulkError(err instanceof Error ? err.message : "Could not parse pages.");
+      return;
+    }
+    updateDraft((prev) => ({
+      ...prev,
+      pages: mode === "replace" ? newPages : [...prev.pages, ...newPages],
+    }));
+    setBulkError(null);
+    setBulkText("");
+    setBulkOpen(false);
+  }
   function removePage(pageKey: string) {
     updateDraft((prev) => ({ ...prev, pages: prev.pages.filter((p) => p.key !== pageKey) }));
   }
@@ -295,6 +338,36 @@ export default function PresetEditor() {
   }
 
   const validation = useMemo(() => validateDraft(draft), [draft]);
+
+  async function handleDelete() {
+    if (draft.id === null || deleting || saving) return;
+    if (!window.confirm(`Delete preset "${draft.name}"? This cannot be undone.`)) return;
+    setDeleting(true);
+    setSaveError(null);
+    setSaved(false);
+    try {
+      const res = await fetch(`/api/presets/${draft.id}`, { method: "DELETE" });
+      const data = await res.json().catch(() => null);
+      if (!res.ok) {
+        setSaveError(data?.error ?? "Failed to delete preset.");
+        setDeleting(false);
+        return;
+      }
+      const fresh = await loadPresets();
+      setPresets(fresh);
+      if (fresh.length > 0) {
+        setSelectedValue(fresh[0].id);
+        setDraft(toDraftPreset(fresh[0]));
+      } else {
+        setSelectedValue(NEW_PRESET_VALUE);
+        setDraft(blankDraft());
+      }
+    } catch (err) {
+      setSaveError(err instanceof Error ? err.message : String(err));
+    } finally {
+      setDeleting(false);
+    }
+  }
 
   async function handleSave() {
     if (!validation.valid || saving) return;
@@ -381,24 +454,30 @@ export default function PresetEditor() {
 
           <div className="flex flex-col gap-1.5">
             <span className="text-xs font-medium tracking-wide text-muted uppercase">Suite</span>
-            <div className="inline-flex rounded-lg border border-border bg-surface-2 p-1">
-              {SUITES.map((s) => (
-                <button
-                  key={s.value}
-                  type="button"
-                  onClick={() => updateDraft((prev) => ({ ...prev, suite: s.value }))}
-                  aria-pressed={draft.suite === s.value}
-                  className={`rounded-md px-4 py-1.5 text-sm font-medium transition-colors ${
-                    draft.suite === s.value ? "bg-surface text-ink shadow-sm" : "text-muted hover:text-ink"
-                  }`}
-                >
-                  {s.label}
-                </button>
-              ))}
-            </div>
+            {draft.id === null ? (
+              <div className="inline-flex rounded-lg border border-border bg-surface-2 p-1">
+                {SUITES.map((s) => (
+                  <button
+                    key={s.value}
+                    type="button"
+                    onClick={() => updateDraft((prev) => ({ ...prev, suite: s.value }))}
+                    aria-pressed={draft.suite === s.value}
+                    className={`rounded-md px-4 py-1.5 text-sm font-medium transition-colors ${
+                      draft.suite === s.value ? "bg-surface text-ink shadow-sm" : "text-muted hover:text-ink"
+                    }`}
+                  >
+                    {s.label}
+                  </button>
+                ))}
+              </div>
+            ) : (
+              <span className="inline-flex w-fit items-center rounded-md border border-border bg-surface-2 px-3 py-1.5 text-sm font-medium text-ink">
+                {suiteLabel(draft.suite)}
+              </span>
+            )}
             {draft.id !== null && (
               <p className="max-w-[220px] text-xs text-faint">
-                Changing suite changes which fields apply to each page.
+                A preset&rsquo;s suite is fixed once created.
               </p>
             )}
           </div>
@@ -407,10 +486,78 @@ export default function PresetEditor() {
         <div className="flex flex-col gap-4">
           <div className="flex items-center justify-between gap-4">
             <h3 className="font-display text-lg text-ink">Pages</h3>
-            <button type="button" className="btn btn-secondary text-sm" onClick={addPage}>
-              + Add page
-            </button>
+            <div className="flex gap-2">
+              <button
+                type="button"
+                className="btn btn-secondary text-sm"
+                onClick={() => {
+                  setBulkOpen((v) => !v);
+                  setBulkError(null);
+                }}
+              >
+                Paste JSON
+              </button>
+              <button type="button" className="btn btn-secondary text-sm" onClick={addPage}>
+                + Add page
+              </button>
+            </div>
           </div>
+
+          {bulkOpen && (
+            <div className="flex flex-col gap-2 rounded-lg border border-border bg-surface-2/40 p-4">
+              <label
+                htmlFor="bulk-pages"
+                className="text-xs font-medium tracking-wide text-muted uppercase"
+              >
+                Paste pages (JSON array)
+              </label>
+              <textarea
+                id="bulk-pages"
+                className="input min-h-[160px] font-mono text-xs"
+                value={bulkText}
+                onChange={(e) => setBulkText(e.target.value)}
+                spellCheck={false}
+                placeholder={
+                  '[\n  { "label": "Home", "path": "" },\n  { "label": "Products", "path": "products" }\n]'
+                }
+              />
+              <p className="text-xs text-faint">
+                An array of {"{ label, path }"} objects. For dataLayer presets you can also include{" "}
+                <span className="font-mono">interactions</span> and{" "}
+                <span className="font-mono">skipEvents</span> per page.
+              </p>
+              {bulkError && <p className="text-xs text-warn">{bulkError}</p>}
+              <div className="flex flex-wrap gap-2">
+                <button
+                  type="button"
+                  className="btn btn-primary text-sm"
+                  onClick={() => loadBulkPages("replace")}
+                  disabled={!bulkText.trim()}
+                >
+                  Replace pages
+                </button>
+                <button
+                  type="button"
+                  className="btn btn-secondary text-sm"
+                  onClick={() => loadBulkPages("append")}
+                  disabled={!bulkText.trim()}
+                >
+                  Append
+                </button>
+                <button
+                  type="button"
+                  className="btn btn-secondary text-sm"
+                  onClick={() => {
+                    setBulkOpen(false);
+                    setBulkError(null);
+                  }}
+                >
+                  Cancel
+                </button>
+              </div>
+            </div>
+          )}
+
           {validation.pagesError && <p className="text-xs text-warn">{validation.pagesError}</p>}
           {draft.pages.length === 0 ? (
             <p className="rounded-lg border border-dashed border-border p-6 text-center text-sm text-muted">
@@ -439,13 +586,25 @@ export default function PresetEditor() {
           )}
         </div>
 
-        <div className="flex items-center justify-between gap-4 border-t border-border pt-6">
-          <div className="min-h-[1.25rem] text-sm">
-            {saveError ? (
-              <span className="text-warn">{saveError}</span>
-            ) : saved ? (
-              <span className="text-match">Saved ✓</span>
-            ) : null}
+        <div className="flex flex-wrap items-center justify-between gap-4 border-t border-border pt-6">
+          <div className="flex items-center gap-4">
+            {draft.id !== null && (
+              <button
+                type="button"
+                className="btn btn-secondary text-warn text-sm"
+                onClick={() => void handleDelete()}
+                disabled={deleting || saving}
+              >
+                {deleting ? "Deleting…" : "Delete preset"}
+              </button>
+            )}
+            <div className="min-h-[1.25rem] text-sm">
+              {saveError ? (
+                <span className="text-warn">{saveError}</span>
+              ) : saved ? (
+                <span className="text-match">Saved ✓</span>
+              ) : null}
+            </div>
           </div>
           <button type="submit" className="btn btn-primary" disabled={!validation.valid || saving}>
             {saving ? "Saving…" : "Save preset"}
