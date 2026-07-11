@@ -1,5 +1,6 @@
 minimumReleaseAge: 0
 
 ignoredBuiltDependencies:
+  - esbuild
   - sharp
   - unrs-resolver
