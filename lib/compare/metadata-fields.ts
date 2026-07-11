@@ -1,0 +1,33 @@
+export const METADATA_FIELDS: string[] = [
+  'pageTitle',
+  'canonicalURL',
+  'robots',
+  'metaTitle',
+  'metaDescription',
+  'metaKeywords',
+  'ogType',
+  'ogTitle',
+  'ogDescription',
+  'ogURL',
+  'ogImageSecureURL',
+  'ogImage',
+  'ogImageAlt',
+  'ogSiteName',
+  'ogLocale',
+  'ogLocaleAlternate',
+  'twitterCard',
+  'twitterTitle',
+  'twitterDescription',
+  'twitterImage',
+  'twitterImageAlt',
+  'twitterURL',
+];
+
+export const METADATA_URL_FIELDS = new Set<string>([
+  'canonicalURL',
+  'ogURL',
+  'ogImage',
+  'ogImageSecureURL',
+  'twitterURL',
+  'twitterImage',
+]);

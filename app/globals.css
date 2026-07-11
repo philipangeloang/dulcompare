@@ -1,0 +1,263 @@
+@import "tailwindcss";
+
+:root {
+  /* base surfaces */
+  --canvas: #fbfaf7;
+  --surface: #ffffff;
+  --surface-2: #f4f2ec;
+  --border: #e7e3da;
+
+  /* text */
+  --ink: #1a1917;
+  --muted: #6b6862;
+  --faint: #9a968e;
+
+  /* brand */
+  --accent: #12655e;
+  --accent-ink: #0c4a45;
+
+  /* semantic status (diff) */
+  --match: #2f8f5b;
+  --match-bg: #e7f3ec;
+  --diff: #b4770e;
+  --diff-bg: #fbf1dd;
+  --a-only: #2563a8;
+  --a-only-bg: #e4edf8;
+  --b-only: #7a4fb0;
+  --b-only-bg: #efe8f8;
+  --warn: #c0432f;
+  --warn-bg: #fbe7e2;
+}
+
+/*
+ * `inline` bakes the var(--font-display) / var(--font-ui) / var(--font-mono)
+ * references directly into generated utilities instead of re-declaring the
+ * custom property at :root. That's required here because next/font supplies
+ * the *real* value of these same-named variables via a class on <html>; a
+ * plain @theme block would shadow that with a self-referencing (invalid)
+ * :root declaration.
+ */
+@theme inline {
+  --font-display: var(--font-display), Georgia, "Times New Roman", serif;
+  --font-ui: var(--font-ui), system-ui, -apple-system, sans-serif;
+  --font-mono: var(--font-mono), ui-monospace, "SFMono-Regular", monospace;
+
+  --color-canvas: var(--canvas);
+  --color-surface: var(--surface);
+  --color-surface-2: var(--surface-2);
+  --color-border: var(--border);
+  --color-ink: var(--ink);
+  --color-muted: var(--muted);
+  --color-faint: var(--faint);
+  --color-accent: var(--accent);
+  --color-accent-ink: var(--accent-ink);
+
+  --color-match: var(--match);
+  --color-match-bg: var(--match-bg);
+  --color-diff: var(--diff);
+  --color-diff-bg: var(--diff-bg);
+  --color-a-only: var(--a-only);
+  --color-a-only-bg: var(--a-only-bg);
+  --color-b-only: var(--b-only);
+  --color-b-only-bg: var(--b-only-bg);
+  --color-warn: var(--warn);
+  --color-warn-bg: var(--warn-bg);
+}
+
+html {
+  color-scheme: light;
+}
+
+body {
+  /* faint dot-grid texture on the warm paper canvas, ~4% ink */
+  background-image: radial-gradient(
+    circle at 1px 1px,
+    rgba(26, 25, 23, 0.05) 1.1px,
+    transparent 0
+  );
+  background-size: 24px 24px;
+  background-attachment: fixed;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+}
+
+::selection {
+  background-color: var(--accent);
+  color: var(--canvas);
+}
+
+@layer components {
+  .card {
+    background-color: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    box-shadow:
+      0 1px 2px rgba(26, 25, 23, 0.04),
+      0 8px 24px -12px rgba(26, 25, 23, 0.1);
+  }
+
+  .btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    border-radius: 8px;
+    padding: 0.625rem 1.25rem;
+    font-family: var(--font-ui), system-ui, sans-serif;
+    font-weight: 600;
+    font-size: 0.875rem;
+    transition:
+      background-color 0.15s ease,
+      transform 0.1s ease,
+      box-shadow 0.15s ease;
+  }
+  .btn:active {
+    transform: scale(0.98);
+  }
+  .btn:focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 2px;
+  }
+  .btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+    transform: none;
+  }
+
+  .btn-primary {
+    background-color: var(--accent);
+    color: var(--canvas);
+    box-shadow: 0 1px 2px rgba(26, 25, 23, 0.08);
+  }
+  .btn-primary:hover:not(:disabled) {
+    background-color: var(--accent-ink);
+  }
+
+  .btn-secondary {
+    background-color: var(--surface);
+    color: var(--ink);
+    border: 1px solid var(--border);
+  }
+  .btn-secondary:hover:not(:disabled) {
+    background-color: var(--surface-2);
+  }
+
+  .input {
+    width: 100%;
+    background-color: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 0.625rem 0.75rem;
+    font-size: 0.875rem;
+    color: var(--ink);
+    transition:
+      border-color 0.15s ease,
+      box-shadow 0.15s ease;
+  }
+  .input:focus {
+    outline: none;
+    border-color: var(--accent);
+    box-shadow: 0 0 0 3px rgba(18, 101, 94, 0.15);
+  }
+  .input::placeholder {
+    color: var(--faint);
+  }
+  .input.input-invalid {
+    border-color: var(--warn);
+  }
+  .input.input-invalid:focus {
+    box-shadow: 0 0 0 3px rgba(192, 67, 47, 0.15);
+  }
+
+  .pill {
+    display: inline-flex;
+    align-items: center;
+    font-family: var(--font-mono), ui-monospace, monospace;
+    font-size: 0.6875rem;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    padding: 2px 7px;
+    border-radius: 6px;
+    white-space: nowrap;
+  }
+
+  .stat {
+    font-family: var(--font-mono), ui-monospace, monospace;
+    font-variant-numeric: tabular-nums;
+  }
+
+  .progress-track {
+    position: relative;
+    height: 8px;
+    border-radius: 999px;
+    background-color: var(--surface-2);
+    overflow: hidden;
+  }
+
+  .progress-fill {
+    height: 100%;
+    border-radius: 999px;
+    background-color: var(--accent);
+    transition: width 0.35s ease;
+  }
+
+  .progress-fill-indeterminate {
+    position: absolute;
+    top: 0;
+    height: 100%;
+    width: 35%;
+    border-radius: 999px;
+    background-color: var(--accent);
+    animation: progress-indeterminate 1.3s ease-in-out infinite;
+  }
+}
+
+@keyframes progress-indeterminate {
+  0% {
+    left: -35%;
+  }
+  100% {
+    left: 100%;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .progress-fill-indeterminate {
+    animation: none;
+    left: 0;
+    width: 50%;
+  }
+}
+
+@keyframes fade-up {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-fade-up {
+  animation: fade-up 420ms cubic-bezier(0.2, 0.7, 0.2, 1) both;
+}
+.animate-fade-up-1 {
+  animation-delay: 60ms;
+}
+.animate-fade-up-2 {
+  animation-delay: 140ms;
+}
+.animate-fade-up-3 {
+  animation-delay: 220ms;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .animate-fade-up,
+  .animate-fade-up-1,
+  .animate-fade-up-2,
+  .animate-fade-up-3 {
+    animation: none;
+  }
+}
