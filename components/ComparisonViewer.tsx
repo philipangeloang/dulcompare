@@ -1,8 +1,14 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 import Link from "next/link";
-import type { ComparisonResult, ComparisonSummary, DiffRow, RunMeta } from "@/lib/types";
+import type {
+  ComparisonResult,
+  ComparisonSummary,
+  DiffRow,
+  IndexedDiffRow,
+  RunMeta,
+} from "@/lib/types";
 import DiffTable from "@/components/DiffTable";
 import { KIND_CLASSES, type StatusKind } from "@/components/StatusPill";
 import { rowsToCsv } from "@/lib/compare/csv";
@@ -11,7 +17,8 @@ import { suiteLabel } from "@/lib/labels";
 type BucketKey = keyof ComparisonSummary;
 type Section = NonNullable<DiffRow["section"]>;
 
-const SUMMARY_ORDER: BucketKey[] = ["match", "value_diff", "a_only", "b_only", "other"];
+// Passed sits second, right after Match, so the "accepted / resolved" counts read together.
+const TILE_ORDER: (BucketKey | "passed")[] = ["match", "passed", "value_diff", "a_only", "b_only", "other"];
 const SUMMARY_KIND: Record<BucketKey, StatusKind> = {
   match: "match",
   value_diff: "diff",
@@ -26,7 +33,7 @@ const SECTIONS: { key: Section; label: string }[] = [
   { key: "metadata", label: "Metadata" },
 ];
 
-const CSV_COLUMNS: (keyof DiffRow)[] = [
+const CSV_COLUMNS: string[] = [
   "page",
   "url",
   "section",
@@ -35,9 +42,10 @@ const CSV_COLUMNS: (keyof DiffRow)[] = [
   "valueA",
   "valueB",
   "status",
+  "reviewed",
 ];
 
-const CSV_COLUMNS_DATALAYER: (keyof DiffRow)[] = [
+const CSV_COLUMNS_DATALAYER: string[] = [
   "page",
   "url",
   "event",
@@ -47,6 +55,7 @@ const CSV_COLUMNS_DATALAYER: (keyof DiffRow)[] = [
   "valueB",
   "status",
   "reason",
+  "reviewed",
 ];
 
 /** Mirrors the bucketing logic in lib/compare/seo-compare.ts and lib/compare/datalayer-compare.ts's pushRow. */
@@ -58,7 +67,7 @@ function bucketOf(status: string, siteALabel: string, siteBLabel: string): Bucke
   return "other";
 }
 
-function downloadCsv(rows: DiffRow[], columns: (keyof DiffRow)[], filename: string) {
+function downloadCsv(rows: Record<string, unknown>[], columns: string[], filename: string) {
   const csv = rowsToCsv(rows, columns);
   const blob = new Blob([csv], { type: "text/csv;charset=utf-8" });
   const url = URL.createObjectURL(blob);
@@ -81,45 +90,120 @@ export default function ComparisonViewer({
   const { siteA, siteB } = meta;
   const isDatalayer = meta.suite === "datalayer";
   const [activeSection, setActiveSection] = useState<Section>("metadata");
-  const [statusFilter, setStatusFilter] = useState<BucketKey | null>(null);
+  const [statusFilter, setStatusFilter] = useState<BucketKey | "passed" | null>(null);
   const [pageFilter, setPageFilter] = useState("");
+  const [passed, setPassed] = useState<Set<number>>(() => new Set(meta.passed ?? []));
 
   const created = new Date(meta.createdAt);
 
-  const summaryLabels: Record<BucketKey, string> = {
+  const summaryLabels: Record<BucketKey | "passed", string> = {
     match: "Match",
     value_diff: "Value diff",
     a_only: `${siteA.label} only`,
     b_only: `${siteB.label} only`,
     other: "Other",
+    passed: "Passed",
   };
 
+  const indexed: IndexedDiffRow[] = useMemo(
+    () => comparison.rows.map((r, idx) => ({ ...r, idx })),
+    [comparison.rows],
+  );
+
+  const persist = useCallback(
+    (next: Set<number>) => {
+      fetch(`/api/runs/${meta.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ passed: [...next] }),
+      }).catch((err) => console.error("Failed to persist passed rows", err));
+    },
+    [meta.id],
+  );
+
+  const togglePass = useCallback(
+    (idx: number) => {
+      const next = new Set(passed);
+      if (next.has(idx)) next.delete(idx);
+      else next.add(idx);
+      setPassed(next);
+      persist(next);
+    },
+    [passed, persist],
+  );
+
+  const matchingIndices = useCallback(
+    (row: DiffRow, scope: "template" | "run") =>
+      indexed
+        .filter(
+          (r) =>
+            r.key === row.key &&
+            r.status === row.status &&
+            r.section === row.section &&
+            r.event === row.event &&
+            (scope === "run" || r.page === row.page),
+        )
+        .map((r) => r.idx),
+    [indexed],
+  );
+
+  const bulkPass = useCallback(
+    (row: DiffRow, scope: "template" | "run") => {
+      const next = new Set(passed);
+      for (const idx of matchingIndices(row, scope)) next.add(idx);
+      setPassed(next);
+      persist(next);
+    },
+    [passed, matchingIndices, persist],
+  );
+
+  const matchCount = useCallback(
+    (row: DiffRow, scope: "template" | "run") => matchingIndices(row, scope).length,
+    [matchingIndices],
+  );
+
   const bySection = useMemo(() => {
-    const map = new Map<Section, DiffRow[]>(SECTIONS.map((s) => [s.key, []]));
-    for (const row of comparison.rows) {
+    const map = new Map<Section, IndexedDiffRow[]>(SECTIONS.map((s) => [s.key, []]));
+    for (const row of indexed) {
       if (!row.section) continue;
       map.get(row.section)?.push(row);
     }
     return map;
-  }, [comparison.rows]);
+  }, [indexed]);
 
   const hasOverfireOrWhitespace = useMemo(
     () => isDatalayer && comparison.rows.some((r) => r.status.startsWith("match (")),
     [isDatalayer, comparison.rows],
   );
 
+  // Rows the summary + table operate over: for SEO, only the active section
+  // (so the tiles tell you whether THAT tab is clean); datalayer has no sections.
+  const scopeRows = useMemo(
+    () => (isDatalayer ? indexed : (bySection.get(activeSection) ?? [])),
+    [isDatalayer, indexed, bySection, activeSection],
+  );
+
+  const counts = useMemo(() => {
+    const c = { match: 0, value_diff: 0, a_only: 0, b_only: 0, other: 0, passed: 0 };
+    for (const r of scopeRows) {
+      if (passed.has(r.idx)) {
+        c.passed++;
+        continue;
+      }
+      c[bucketOf(r.status, siteA.label, siteB.label)]++;
+    }
+    return c;
+  }, [scopeRows, passed, siteA.label, siteB.label]);
+
   const filteredRows = useMemo(() => {
-    // Summary tiles count across ALL sections, so when a status chip is active we must
-    // filter across all sections too (not just the active tab) — otherwise the visible
-    // rows silently under-count vs. the tile. Datalayer has no sections and always uses
-    // all rows.
-    let rows =
-      isDatalayer || statusFilter
-        ? comparison.rows
-        : (bySection.get(activeSection) ?? []);
-    if (statusFilter) {
+    // Scoped to the active section (SEO) or all rows (datalayer); status chips
+    // filter within that scope so the visible rows always match the tile counts.
+    let rows: IndexedDiffRow[] = scopeRows;
+    if (statusFilter === "passed") {
+      rows = rows.filter((r) => passed.has(r.idx));
+    } else if (statusFilter) {
       rows = rows.filter(
-        (r) => bucketOf(r.status, siteA.label, siteB.label) === statusFilter,
+        (r) => !passed.has(r.idx) && bucketOf(r.status, siteA.label, siteB.label) === statusFilter,
       );
     }
     const q = pageFilter.trim().toLowerCase();
@@ -129,11 +213,9 @@ export default function ComparisonViewer({
       );
     }
     return rows;
-  }, [isDatalayer, comparison.rows, bySection, activeSection, statusFilter, pageFilter, siteA.label, siteB.label]);
+  }, [scopeRows, statusFilter, passed, pageFilter, siteA.label, siteB.label]);
 
-  // While a status chip is active the table shows all sections combined, so the
-  // section sub-tabs no longer scope the view — disable them to avoid implying they do.
-  const sectionTabsDisabled = Boolean(statusFilter);
+  const activeSectionLabel = SECTIONS.find((s) => s.key === activeSection)?.label ?? "";
 
   return (
     <div className="flex flex-col gap-6">
@@ -185,25 +267,34 @@ export default function ComparisonViewer({
 
       <div className="card animate-fade-up animate-fade-up-1 flex flex-col gap-4 p-6 sm:p-8">
         <div className="flex flex-wrap items-center justify-between gap-3">
-          <h2 className="font-display text-lg text-ink">Summary</h2>
+          <div className="flex items-center gap-2">
+            <h2 className="font-display text-lg text-ink">Summary</h2>
+            {!isDatalayer && (
+              <span className="pill bg-surface-2 text-muted">{activeSectionLabel}</span>
+            )}
+          </div>
           <span className="stat text-sm text-muted">
-            {comparison.rows.length} rows total
+            {scopeRows.length} {isDatalayer ? "rows total" : "rows in this tab"}
           </span>
         </div>
-        <div className="grid grid-cols-2 gap-3 sm:grid-cols-5">
-          {SUMMARY_ORDER.map((key) => {
+        <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
+          {TILE_ORDER.map((key) => {
             const active = statusFilter === key;
+            const kindClasses = key === "passed" ? "bg-accent/10 text-accent" : KIND_CLASSES[SUMMARY_KIND[key]];
+            const borderClasses = active
+              ? "border-ink ring-2 ring-accent/40"
+              : key === "passed"
+                ? "border-accent/30 hover:border-accent/50"
+                : "border-border hover:border-ink/25";
             return (
               <button
                 key={key}
                 type="button"
                 onClick={() => setStatusFilter((cur) => (cur === key ? null : key))}
                 aria-pressed={active}
-                className={`flex flex-col gap-1 rounded-lg border p-4 text-left transition-all ${KIND_CLASSES[SUMMARY_KIND[key]]} ${
-                  active ? "border-ink ring-2 ring-accent/40" : "border-border hover:border-ink/25"
-                }`}
+                className={`flex flex-col gap-1 rounded-lg border p-4 text-left transition-all ${kindClasses} ${borderClasses}`}
               >
-                <span className="stat text-2xl font-medium">{comparison.summary[key]}</span>
+                <span className="stat text-2xl font-medium">{counts[key]}</span>
                 <span className="text-xs font-medium tracking-wide uppercase opacity-80">
                   {summaryLabels[key]}
                 </span>
@@ -221,28 +312,22 @@ export default function ComparisonViewer({
       <div className="card animate-fade-up animate-fade-up-2 flex flex-col gap-4 p-6 sm:p-8">
         <div className="flex flex-wrap items-center gap-4">
           {!isDatalayer && (
-            <div
-              className={`inline-flex rounded-lg border border-border bg-surface-2 p-1 transition-opacity ${
-                sectionTabsDisabled ? "opacity-50" : ""
-              }`}
-              title={
-                sectionTabsDisabled
-                  ? "Showing all sections while a status filter is active"
-                  : undefined
-              }
-            >
+            <div className="inline-flex rounded-lg border border-border bg-surface-2 p-1">
               {SECTIONS.map((s) => {
                 const rows = bySection.get(s.key) ?? [];
-                const diffs = rows.filter((r) => !r.status.startsWith("match")).length;
-                const active = !sectionTabsDisabled && activeSection === s.key;
+                // Unresolved diffs = non-match and not yet accepted, so a fully
+                // reviewed section reads "0 diffs".
+                const diffs = rows.filter(
+                  (r) => !r.status.startsWith("match") && !passed.has(r.idx),
+                ).length;
+                const active = activeSection === s.key;
                 return (
                   <button
                     key={s.key}
                     type="button"
                     onClick={() => setActiveSection(s.key)}
                     aria-pressed={active}
-                    disabled={sectionTabsDisabled}
-                    className={`flex items-center gap-2 rounded-md px-4 py-1.5 text-sm font-medium transition-colors disabled:cursor-not-allowed ${
+                    className={`flex items-center gap-2 rounded-md px-4 py-1.5 text-sm font-medium transition-colors ${
                       active ? "bg-surface text-ink shadow-sm" : "text-muted hover:text-ink"
                     }`}
                   >
@@ -276,15 +361,19 @@ export default function ComparisonViewer({
             )}
             <button
               type="button"
-              onClick={() =>
-                isDatalayer
-                  ? downloadCsv(filteredRows, CSV_COLUMNS_DATALAYER, "dulcompare-datalayer.csv")
+              onClick={() => {
+                const csvRows = filteredRows.map((r) => ({
+                  ...r,
+                  reviewed: passed.has(r.idx) ? "passed" : "",
+                }));
+                return isDatalayer
+                  ? downloadCsv(csvRows, CSV_COLUMNS_DATALAYER, "dulcompare-datalayer.csv")
                   : downloadCsv(
-                      filteredRows,
+                      csvRows,
                       CSV_COLUMNS,
-                      `dulcompare-${meta.suite}-${statusFilter ? "all-sections" : activeSection}.csv`,
-                    )
-              }
+                      `dulcompare-${meta.suite}-${activeSection}.csv`,
+                    );
+              }}
               className="btn btn-secondary"
             >
               Download CSV
@@ -297,6 +386,7 @@ export default function ComparisonViewer({
           siteALabel={siteA.label}
           siteBLabel={siteB.label}
           mode={isDatalayer ? "datalayer" : "seo"}
+          review={{ passed, onToggle: togglePass, onBulk: bulkPass, matchCount }}
         />
       </div>
     </div>

@@ -119,7 +119,7 @@ export default function RunDetailPage() {
     );
   }
 
-  return <ComparisonViewer meta={meta} comparison={comparison} />;
+  return <ComparisonViewer key={meta.id} meta={meta} comparison={comparison} />;
 }
 
 function RunHeader({ meta }: { meta: RunMeta }) {

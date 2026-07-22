@@ -50,6 +50,7 @@ export default function RunProgress({
     initialMeta.progress,
   );
   const [polling, setPolling] = useState(false);
+  const [lastBeat, setLastBeat] = useState<string | null>(initialMeta.updatedAt ?? null);
   const finishedRef = useRef(false);
 
   useEffect(() => {
@@ -75,7 +76,13 @@ export default function RunProgress({
           const res = await fetch(`/api/runs/${id}`, { cache: "no-store" });
           if (!res.ok) return;
           const data = (await res.json()) as { meta?: RunMeta };
-          if (data.meta && data.meta.status !== "running") finish();
+          if (!data.meta) return;
+          // Keep the progress display live while polling — without this the bar
+          // freezes at whatever the SSE stream last showed, so a slow-but-healthy
+          // run is indistinguishable from a dead one.
+          setProgress(data.meta.progress);
+          setLastBeat(data.meta.updatedAt ?? null);
+          if (data.meta.status !== "running") finish();
         } catch {
           // transient network hiccup — keep polling
         }
@@ -200,7 +207,10 @@ export default function RunProgress({
 
       {polling && (
         <p className="text-xs text-faint">
-          Live updates unavailable — polling for status…
+          Live updates unavailable — polling for status
+          {lastBeat && <> · last progress {new Date(lastBeat).toLocaleTimeString()}</>}. If this
+          stops advancing, the server likely restarted mid-run; the run is marked failed after 5
+          minutes without progress.
         </p>
       )}
     </div>

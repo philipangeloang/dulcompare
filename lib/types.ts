@@ -34,6 +34,8 @@ export interface DiffRow {
   reason?: string;
 }
 
+export interface IndexedDiffRow extends DiffRow { idx: number }
+
 export interface ComparisonSummary { match: number; value_diff: number; a_only: number; b_only: number; other: number; }
 export interface ComparisonResult { summary: ComparisonSummary; rows: DiffRow[]; }
 
@@ -42,6 +44,8 @@ export interface RunProgress { phase: 'capture' | 'compare' | 'done'; site?: 'A'
 export interface RunMeta {
   id: string;
   createdAt: string;
+  /** Heartbeat — bumped on every progress emit, so a run orphaned by a server restart can be detected. */
+  updatedAt?: string;
   suite: Suite;
   siteA: SiteRef;
   siteB: SiteRef;
@@ -51,4 +55,5 @@ export interface RunMeta {
   progress: RunProgress;
   error?: string;
   warnings?: Record<string, string[]>;
+  passed?: number[];
 }

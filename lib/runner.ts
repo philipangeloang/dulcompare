@@ -26,7 +26,7 @@ export async function startRun(input: { suite: Suite; siteA: SiteRef; siteB: Sit
   if (!preset) throw new Error(`Preset not found: ${input.presetId}`);
   const id = randomUUID();
   const meta: RunMeta = {
-    id, createdAt: new Date().toISOString(), suite: input.suite,
+    id, createdAt: new Date().toISOString(), updatedAt: new Date().toISOString(), suite: input.suite,
     siteA: input.siteA, siteB: input.siteB, presetId: preset.id, presetSnapshot: preset,
     status: 'running', progress: { phase: 'capture', site: 'A', pageIndex: 0, total: preset.pages.length },
   };
@@ -44,7 +44,12 @@ export async function startRun(input: { suite: Suite; siteA: SiteRef; siteB: Sit
 }
 
 async function execute(meta: RunMeta, preset: Preset): Promise<void> {
-  const emit = async (p: RunProgress) => { meta.progress = p; registry.emit(meta.id, p); await store.saveRunMeta(meta); };
+  const emit = async (p: RunProgress) => {
+    meta.progress = p;
+    meta.updatedAt = new Date().toISOString();
+    registry.emit(meta.id, p);
+    await store.saveRunMeta(meta);
+  };
   await withBrowser(async (browser) => {
     if (meta.suite === 'seo') {
       const reportsA = await captureSeoSite(browser, meta.siteA.baseURL, preset, 'A', emit);

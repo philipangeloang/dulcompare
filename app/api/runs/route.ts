@@ -1,5 +1,6 @@
 import { startRun } from '@/lib/runner';
 import { listRuns } from '@/lib/store';
+import { reconcileStale } from '@/lib/reconcile';
 import type { Suite } from '@/lib/types';
 
 export const runtime = 'nodejs';
@@ -36,5 +37,8 @@ export async function POST(req: Request) {
 }
 
 export async function GET() {
-  return Response.json(await listRuns());
+  // Flip any run orphaned by a server restart from "running" to "error" so the
+  // history list doesn't show a spinner that will never resolve.
+  const runs = await Promise.all((await listRuns()).map((m) => reconcileStale(m)));
+  return Response.json(runs.filter((m) => m !== null));
 }
